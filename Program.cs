@@ -11,40 +11,50 @@ using ConsoleAppFramework;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 
-await ConsoleApp.RunAsync(args, async ([Argument] string path, CancellationToken cancellationToken, int port = 5000) =>
+public static class Program
 {
-    AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-
-    var builder = WebApplication.CreateBuilder(args);
-
-    // Add services to the container.
-    builder.Services.AddGrpc();
-
-    // If use `RocksDBStore`, try this:
-    builder.Services.AddSingleton<IKeyValueStore>(_ => new RocksDBKeyValueStore(path, RocksDBInstanceType.Secondary));
-
-    builder.Services.AddSingleton<Serilog.ILogger>(
-        new LoggerConfiguration()
-            .WriteTo.Console()
-            .MinimumLevel.Warning()
-            .CreateLogger());
-
-    builder.Services.AddHealthChecks();
-    builder.Services.AddHostedService<RocksDbSynchronizer>();
-
-    builder.WebHost.ConfigureKestrel(options =>
+    public static async Task Main(string[] args)
     {
-        options.ListenAnyIP(port, listenOptions =>
+        await ConsoleApp.RunAsync(args, Run);
+    }
+
+    /// <summary>
+    /// Run server with given arguments and options.
+    /// </summary>
+    /// <param name="path">Path to key-value store. (e.g., /path/to/snapshot/states)</param>
+    /// <param name="port">Port number to listen gRPC requests.</param>
+    private static async Task Run([Argument] string path, CancellationToken cancellationToken, int port = 5000)
+    {
+        AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+
+        var builder = WebApplication.CreateBuilder();
+
+        // Add services to the container.
+        builder.Services.AddGrpc();
+
+        // If use `RocksDBStore`, try this:
+        builder.Services.AddSingleton<IKeyValueStore>(_ => new RocksDBKeyValueStore(path, RocksDBInstanceType.Secondary));
+
+        builder.Services.AddSingleton<Serilog.ILogger>(
+            new LoggerConfiguration()
+                .WriteTo.Console()
+                .MinimumLevel.Warning()
+                .CreateLogger());
+
+        builder.Services.AddHealthChecks();
+        builder.Services.AddHostedService<RocksDbSynchronizer>();
+
+        builder.WebHost.ConfigureKestrel(options =>
         {
-            listenOptions.Protocols = HttpProtocols.Http2;
+            options.ListenAnyIP(port, listenOptions => { listenOptions.Protocols = HttpProtocols.Http2; });
         });
-    });
 
-    var app = builder.Build();
+        var app = builder.Build();
 
-    // Configure the HTTP request pipeline.
-    app.MapGrpcService<RemoteKeyValueService>();
-    app.MapHealthChecks("/health");
-    
-    await app.RunAsync(cancellationToken);
-});
+        // Configure the HTTP request pipeline.
+        app.MapGrpcService<RemoteKeyValueService>();
+        app.MapHealthChecks("/health");
+
+        await app.RunAsync(cancellationToken);
+    }
+}
