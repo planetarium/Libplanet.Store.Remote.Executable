@@ -9,7 +9,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 using ConsoleAppFramework;
 using Microsoft.Extensions.Hosting;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
 using Serilog;
+using static OpenTelemetry.Metrics.OpenTelemetryDependencyInjectionMetricsServiceCollectionExtensions;
 
 public static class Program
 {
@@ -43,10 +46,16 @@ public static class Program
 
         builder.Services.AddHealthChecks();
         builder.Services.AddHostedService<RocksDbSynchronizer>();
+        builder.Services.AddOpenTelemetry()
+            .WithMetrics(b => 
+                b.AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddRuntimeInstrumentation()
+                    .AddPrometheusExporter());
 
         builder.WebHost.ConfigureKestrel(options =>
         {
-            options.ListenAnyIP(port, listenOptions => { listenOptions.Protocols = HttpProtocols.Http2; });
+            options.ListenAnyIP(port, listenOptions => { listenOptions.Protocols = HttpProtocols.Http1AndHttp2; });
         });
 
         var app = builder.Build();
@@ -54,6 +63,7 @@ public static class Program
         // Configure the HTTP request pipeline.
         app.MapGrpcService<RemoteKeyValueService>();
         app.MapHealthChecks("/health");
+        app.UseOpenTelemetryPrometheusScrapingEndpoint();
 
         await app.RunAsync(cancellationToken);
     }
