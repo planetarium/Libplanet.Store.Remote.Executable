@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using ConsoleAppFramework;
 using Microsoft.Extensions.Hosting;
+using Serilog;
 
 await ConsoleApp.RunAsync(args, async ([Argument] string path, CancellationToken cancellationToken, int port = 5000) =>
 {
@@ -24,6 +25,7 @@ await ConsoleApp.RunAsync(args, async ([Argument] string path, CancellationToken
 
     builder.Services.AddHealthChecks();
     builder.Services.AddHostedService<RocksDbSynchronizer>();
+    builder.Services.AddLogging(loggingBuilder => loggingBuilder.AddSerilog(dispose: true));
 
     builder.WebHost.ConfigureKestrel(options =>
     {
