@@ -12,6 +12,8 @@ using Microsoft.Extensions.Hosting;
 
 await ConsoleApp.RunAsync(args, async ([Argument] string path, CancellationToken cancellationToken, int port = 5000) =>
 {
+    AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+
     var builder = WebApplication.CreateBuilder(args);
 
     // Add services to the container.
