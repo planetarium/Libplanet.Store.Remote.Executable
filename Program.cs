@@ -30,7 +30,7 @@ await ConsoleApp.RunAsync(args, async ([Argument] string path, CancellationToken
         // Get port from ASPNETCORE_URLS or somewhere, (don't use hard-coded port number)
         options.ListenAnyIP(port, listenOptions =>
         {
-            listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+            listenOptions.Protocols = HttpProtocols.Http2;
         });
     });
 
