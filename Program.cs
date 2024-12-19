@@ -26,7 +26,7 @@ await ConsoleApp.RunAsync(args, async ([Argument] string path, CancellationToken
     builder.Services.AddSingleton<Serilog.ILogger>(
         new LoggerConfiguration()
             .WriteTo.Console()
-            .MinimumLevel.Information()
+            .MinimumLevel.Warning()
             .CreateLogger());
 
     builder.Services.AddHealthChecks();
