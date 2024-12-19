@@ -23,13 +23,17 @@ await ConsoleApp.RunAsync(args, async ([Argument] string path, CancellationToken
     // If use `RocksDBStore`, try this:
     builder.Services.AddSingleton<IKeyValueStore>(_ => new RocksDBKeyValueStore(path, RocksDBInstanceType.Secondary));
 
+    builder.Services.AddSingleton<Serilog.ILogger>(
+        new LoggerConfiguration()
+            .WriteTo.Console()
+            .MinimumLevel.Information()
+            .CreateLogger());
+
     builder.Services.AddHealthChecks();
     builder.Services.AddHostedService<RocksDbSynchronizer>();
-    builder.Services.AddLogging(loggingBuilder => loggingBuilder.AddSerilog(dispose: true));
 
     builder.WebHost.ConfigureKestrel(options =>
     {
-        // Get port from ASPNETCORE_URLS or somewhere, (don't use hard-coded port number)
         options.ListenAnyIP(port, listenOptions =>
         {
             listenOptions.Protocols = HttpProtocols.Http2;
@@ -41,6 +45,6 @@ await ConsoleApp.RunAsync(args, async ([Argument] string path, CancellationToken
     // Configure the HTTP request pipeline.
     app.MapGrpcService<RemoteKeyValueService>();
     app.MapHealthChecks("/health");
-
+    
     await app.RunAsync(cancellationToken);
 });
