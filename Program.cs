@@ -3,31 +3,40 @@ using Libplanet.Store.Remote.Executable;
 using Libplanet.Store.Remote.Server;
 using Libplanet.Store.Trie;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 
-var builder = WebApplication.CreateBuilder(args);
+using ConsoleAppFramework;
+using Microsoft.Extensions.Hosting;
 
-if (args.Length < 1 || args[0] is not { } path)
+await ConsoleApp.RunAsync(args, async ([Argument] string path, CancellationToken cancellationToken, int port = 5000) =>
 {
-    Console.Error.WriteLine("Usage: dotnet Libplanet.Store.Remote.Executable.dll -- <path>");
-    return -1;
-}
+    var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddGrpc();
+    // Add services to the container.
+    builder.Services.AddGrpc();
 
-// If use `RocksDBStore`, try this:
-builder.Services.AddSingleton<IKeyValueStore>(_ => new RocksDBKeyValueStore(path, RocksDBInstanceType.Secondary));
+    // If use `RocksDBStore`, try this:
+    builder.Services.AddSingleton<IKeyValueStore>(_ => new RocksDBKeyValueStore(path, RocksDBInstanceType.Secondary));
 
-builder.Services.AddHealthChecks();
-builder.Services.AddHostedService<RocksDbSynchronizer>();
+    builder.Services.AddHealthChecks();
+    builder.Services.AddHostedService<RocksDbSynchronizer>();
 
-var app = builder.Build();
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        // Get port from ASPNETCORE_URLS or somewhere, (don't use hard-coded port number)
+        options.ListenAnyIP(port, listenOptions =>
+        {
+            listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+        });
+    });
 
-// Configure the HTTP request pipeline.
-app.MapGrpcService<RemoteKeyValueService>();
-app.MapHealthChecks("/health");
+    var app = builder.Build();
 
-app.Run();
+    // Configure the HTTP request pipeline.
+    app.MapGrpcService<RemoteKeyValueService>();
+    app.MapHealthChecks("/health");
 
-return 0;
+    await app.RunAsync(cancellationToken);
+});
