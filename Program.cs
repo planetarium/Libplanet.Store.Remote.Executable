@@ -9,10 +9,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 using ConsoleAppFramework;
 using Microsoft.Extensions.Hosting;
-using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using Serilog;
-using static OpenTelemetry.Metrics.OpenTelemetryDependencyInjectionMetricsServiceCollectionExtensions;
 
 public static class Program
 {
@@ -55,7 +53,7 @@ public static class Program
 
         builder.WebHost.ConfigureKestrel(options =>
         {
-            options.ListenAnyIP(port, listenOptions => { listenOptions.Protocols = HttpProtocols.Http1AndHttp2; });
+            options.ListenAnyIP(port, listenOptions => { listenOptions.Protocols = HttpProtocols.Http2; });
         });
 
         var app = builder.Build();
