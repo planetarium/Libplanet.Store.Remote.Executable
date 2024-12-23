@@ -23,8 +23,10 @@ public static class Program
     /// Run server with given arguments and options.
     /// </summary>
     /// <param name="path">Path to key-value store. (e.g., /path/to/snapshot/states)</param>
-    /// <param name="port">Port number to listen gRPC requests.</param>
-    private static async Task Run([Argument] string path, CancellationToken cancellationToken, int port = 5000)
+    /// <param name="port">Port number to listen gRPC (HTTP 2) requests.</param>
+    /// <param name="httpPort">Port number to listen HTTP 1 requests.</param>
+    private static async Task Run(
+        [Argument] string path, CancellationToken cancellationToken, int port = 5000, int httpPort = 5001)
     {
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
@@ -54,6 +56,7 @@ public static class Program
         builder.WebHost.ConfigureKestrel(options =>
         {
             options.ListenAnyIP(port, listenOptions => { listenOptions.Protocols = HttpProtocols.Http2; });
+            options.ListenAnyIP(httpPort, listenOptions => { listenOptions.Protocols = HttpProtocols.Http1; });
         });
 
         var app = builder.Build();
