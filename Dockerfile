@@ -5,6 +5,8 @@ COPY . ./
 RUN <<EOF
 #!/bin/bash
 echo "TARGETPLATFROM=$TARGETPLATFORM"
+apt update
+apt install -y build-essential
 if [[ "$TARGETPLATFORM" = "linux/amd64" ]]
 then
   dotnet publish Libplanet.Store.Remote.Executable.csproj \
