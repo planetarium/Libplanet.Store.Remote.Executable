@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ConsoleAppFramework;
 using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Metrics;
+using RocksDbSharp;
 using Serilog;
 
 public static class Program
@@ -25,8 +26,10 @@ public static class Program
     /// <param name="path">Path to key-value store. (e.g., /path/to/snapshot/states)</param>
     /// <param name="port">Port number to listen gRPC (HTTP 2) requests.</param>
     /// <param name="httpPort">Port number to listen HTTP 1 requests.</param>
+    /// <param name="disableBlockCache">Disable BlockCache function when using db at <paramref name="path"/>.</param>
+    /// 
     private static async Task Run(
-        [Argument] string path, CancellationToken cancellationToken, int port = 5000, int httpPort = 5001)
+        [Argument] string path, CancellationToken cancellationToken, int port = 5000, int httpPort = 5001, bool disableBlockCache = false)
     {
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
@@ -36,7 +39,8 @@ public static class Program
         builder.Services.AddGrpc();
 
         // If use `RocksDBStore`, try this:
-        builder.Services.AddSingleton<IKeyValueStore>(_ => new RocksDBKeyValueStore(path, RocksDBInstanceType.Secondary));
+        builder.Services.AddSingleton<IKeyValueStore>(_ => new RocksDBKeyValueStore(path, RocksDBInstanceType.Secondary,
+            new DbOptions().SetBlockBasedTableFactory(new BlockBasedTableOptions().SetNoBlockCache(disableBlockCache))));
 
         builder.Services.AddSingleton<Serilog.ILogger>(
             new LoggerConfiguration()
